@@ -1,0 +1,25 @@
+Package: RcppNLopt
+Type: Package
+Title: Wrapper around portable version of NLopt
+Version: 0.0.0
+Author: Alejandro Morales
+Maintainer: Alejandro Morales <morales.s.alejandro@gmail.com>
+Description: A shallow wrapper around the NLopt library. All the source
+    code from NLopt required is included with the package such that no external
+    installation is required.
+License: GPL-3 + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    Rcpp (>= 0.12.8)
+LinkingTo: Rcpp
+Suggests:
+    testthat,
+    Deriv,
+    fad
+RoxygenNote: 6.0.1
+Collate: 
+    'RcppExports.R'
+    'nlopt_options.R'
+    'nlopt.R'
+    'zzz.R'

@@ -1,0 +1,52 @@
+CXX_STD = CXX11
+PKG_CXXFLAGS= -I../inst/include -I../inst/include/nlopt/ -pedantic
+PKG_CFLAGS= -I../inst/include -I../inst/include/nlopt/ -pedantic
+
+NLOPTSOBJECTS=\
+./nlopt/direct/DIRect.o \
+./nlopt/direct/direct_wrap.o  \
+./nlopt/direct/DIRserial.o \
+./nlopt/direct/DIRsubrout.o \
+./nlopt/cdirect/cdirect.o \
+./nlopt/cdirect/hybrid.o \
+./nlopt/praxis/praxis.o \
+./nlopt/luksan/plis.o \
+./nlopt/luksan/plip.o \
+./nlopt/luksan/pnet.o \
+./nlopt/luksan/mssubs.o \
+./nlopt/luksan/pssubs.o \
+./nlopt/crs/crs.o \
+./nlopt/mlsl/mlsl.o \
+./nlopt/mma/mma.o \
+./nlopt/mma/ccsa_quadratic.o \
+./nlopt/cobyla/cobyla.o \
+./nlopt/newuoa/newuoa.o \
+./nlopt/neldermead/nldrmd.o \
+./nlopt/neldermead/sbplx.o \
+./nlopt/auglag/auglag.o \
+./nlopt/bobyqa/bobyqa.o \
+./nlopt/isres/isres.o \
+./nlopt/slsqp/slsqp.o \
+./nlopt/esch/esch.o \
+./nlopt/util/mt19937ar.o \
+./nlopt/util/sobolseq.o \
+./nlopt/util/timer.o \
+./nlopt/util/stop.o \
+./nlopt/util/redblack.o \
+./nlopt/util/qsort_r.o \
+./nlopt/util/rescale.o \
+./nlopt/stogo/global.o \
+./nlopt/stogo/linalg.o \
+./nlopt/stogo/local.o \
+./nlopt/stogo/stogo.o \
+./nlopt/stogo/tools.o \
+./nlopt/api/general.o \
+./nlopt/api/options.o \
+./nlopt/api/optimize.o \
+./nlopt/api/deprecated.o \
+
+TESTOBJECTS = test.o
+
+PKGOBJECTS= wrapper.o RcppExports.o
+
+OBJECTS= $(TESTOBJECTS) $(PKGOBJECTS) $(NLOPTSOBJECTS)
