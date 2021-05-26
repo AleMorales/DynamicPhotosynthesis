@@ -1,0 +1,16 @@
+Package: diff
+Type: Package
+Title: Calculate gradients, jacobians and hessians
+Version: 0.1.0
+Author: Who wrote it
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Calculate gradients, jacobians and hessians of functions using finite differences, complex step differentiation, symbolic transformation and forward automatic differentiation via dual numbers
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
+Suggests:
+  fad,
+  numDeriv,
+  Deriv,
+    testthat
