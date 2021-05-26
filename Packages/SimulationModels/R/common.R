@@ -12,6 +12,7 @@ OutputMatrix <- structure(matrix, class = "OutputMatrix")
 
 # Each variable vs time in its own plot
 # Make sure the names are maintained there
+#' @export
 plot.OutputMatrix = function(mat, subset = 1:nrow(mat), which = 2:ncol(mat), mfrow = c(3,3)) {
   par(mfrow = mfrow, las = 1)
   for(i in which) {
@@ -26,6 +27,7 @@ OutputArray <- structure(array, class = "OutputArray")
 # Each variable vs time in its own plot but multiple replicates with colors
 # Make sure the names are maintained there
 # Add legend for first one
+#' @export
 plot.OutputArray = function(arr, subset = 1:nrow(arr), which = 2:ncol(arr), mfrow = c(3,3)) {
   if(length(dim(arr)) > 3) stop("I cannot plot arrays with 4 or more dimensions.")
   par(mfrow = mfrow, las = 1)
@@ -43,7 +45,10 @@ plot.OutputArray = function(arr, subset = 1:nrow(arr), which = 2:ncol(arr), mfro
 }
 
 # Generic functions to run simulations
+#' @export
 cvode <- function(x, ...) UseMethod("cvode", x)
+
+#' @export
 ida <- function(x, ...) UseMethod("ida", x)
 
 
@@ -53,12 +58,13 @@ ida <- function(x, ...) UseMethod("ida", x)
 ###################################################################################################
 ###################################################################################################
 
+#' @export
 as.data.frame.OutputMatrix = function(x) {
   class(x) = "matrix"
   as.data.frame(x)
 }
 
-
+#' @export
 as.matrix.OutputMatrix = function(x) {
   class(x) = "matrix"
   x

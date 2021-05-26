@@ -1,0 +1,442 @@
+################################################################################
+##############################  Equations  #####################################
+################################################################################
+
+# Three processes may limit RuBP regeneration (Eqn. S1.1)
+observed Vr = min(VrJ, min(VrTPU, VrE)) in umol/m^2/s
+
+# Dynamics of PGA (Eqn. S1.2)
+derivative d_PGA_dt of PGA = 2.0*Vc + 1.5*Vc*phi - Vr in umol/m^2/s
+
+# Dynamics of RuBP (Eqn. S1.3)
+derivative d_RuBP_dt of RuBP = (1.0 + phi)/(2.0 + 1.5*phi)*Vr - Vc*(1.0 + phi) in umol/m^2/s
+
+# Ratio oxygenation/carboxylation (Eqn. S1.4)
+variable phi = Kmc*Ko*O2/(Kmo*Kc*Cc)
+
+# Rate of carboxylation (Eqn. S1.5)
+observed Vc =  fRB*fRuBP*Kc*RB*Cc/(Cc + Kmc*(1.0 + O2/Kmo)) in umol/m^2/s
+
+# Effect of RuBP on Rubisco kinetics (Eqn. S1.6)
+observed fRuBP = 1/(2*RB/Vch)*(RB/Vch + Kmapp_RuBP + RuBP/Vch - sqrt((RB/Vch + Kmapp_RuBP + RuBP/Vch)^2 - 4*RB*RuBP/Vch^2))
+
+# Effect of PGA inhibition on KmRuBP (Eqn. S1.7)
+variable Kmapp_RuBP = KmRuBP*(1 + PGA/(Vch*KiPGA)) in mM
+
+# Dynamics of Rubisco activation state (Eqn. S1.8)
+derivative d_fRB_dt of fRB = ifelse(fRBss > fRB, (fRBss - fRB)*Krca*RCA*fRCA, (fRBss - fRB)*KdRB) in 1/s
+
+# Steady-state Rubisco activation state (Eqn. S1.9)
+variable fRBss = min(fRBss_nr, fRBss_r)
+
+# Effect of temperature on RCA (Eqn. S1.10)
+variable fRCA = DHdRCA*exp((Tl - ToRCA)*DHaRCA/(ToRCA*R*Tl))/(DHdRCA - DHaRCA*(1 - exp(DHdRCA*(Tl - ToRCA)/(ToRCA*R*Tl))))
+
+# Steady-state Rubisco activation state due to carbamylation (Eqn. S1.11)
+variable fRBss_nr = min(1.0, ac + bc*Cc)
+
+# Maximum Rubisco activation state (Eqn. S1.12)
+variable fRBmax = RCA*fRCA/(RCA*fRCA + KaRCA)
+
+# Steady-state Rubisco activation state regulated by RCA (Eqn. S1.13)
+variable fRBss_r = min(ifelse(PAR > Flux0,  min(VrTPU,VrJ)/(2.0 + 1.5*phi)/(Vc/(fRB*fRuBP)), fRBmin), fRBmax)
+
+# Rate constant of carboxylation (Eqn. S1.14)
+variable Kc = Kc25*exp((Tl - Tref)*DHaKc/(Tref*R*Tl)) in 1/s
+
+# Rate constant of oxygenation (Eqn. S1.15)
+variable Ko = Ko25*exp((Tl - Tref)*DHaKo/(Tref*R*Tl)) in 1/s
+
+# Michaelis-Menten of Rubisco with respect to CO2 (Eqn. S1.16)
+variable Kmc = Kmc25*exp((Tl - Tref)*DHaKmc/(Tref*R*Tl)) in umol/mol
+
+# Michaelis-Menten of Rubisco with respect to O2 (Eqn. S1.17)
+variable Kmo = Kmo25*exp((Tl - Tref)*DHaKmo/(Tref*R*Tl)) in mmol/mol
+
+# Potential rate of electron transport affected by chloroplast movement and photoinhibition (Eqn. S1.18)
+variable J2pp = (PhiIIop*PARaP2 + Jmax - sqrt((PhiIIop*PARaP2 + Jmax)^2 - 4*PhiIIop*theta*Jmax*PARaP2))/(2*theta) in umol/m^2/s
+
+# Irradiance available for PSII photochemistry at the leaf level (Eqn. S1.19)
+variable PARaP2 = sigma2*alphar*PARaP in umol/m^2/s
+
+# Irradiance available for photosynthesis (Eqn. S1.20)
+observed PARaP = Ib*alphabp + Ig*alphagp + Ir*alpharp in umol/m^2/s
+observed PARa =  Ib*alphab  + Ig*alphag  + Ir*alphared  in umol/m^2/s
+observed PAR = Ib + Ig + Ir in umol/m^2/s
+
+# qP parameter for potential electron transport (Eqn. S1.21)
+variable qPp = ifelse(PARaP2 > Flux0, J2pp/PARaP2/PhiIIop, 1)
+variable qPm = J2pm/J2pp*qPp
+variable qPno_qD = min(qPm, qPp)
+
+# Empirical indices related to PsbS and ZX formation -> Maximum PhiqE when Qa completely reduced
+observed fqEss = (1 - qPno_qD)
+observed fP = fqEss
+observed fZ = fqEss
+#derivative d_fP_dt of fP = ifelse(fqEss > fP, (fqEss - fP)*KiqEp, (fqEss - fP)*KdqEp) in 1/s
+#derivative d_fZ_dt of fZ = ifelse(fqEss > fZ, (fqEss - fZ)*KiqEz, (fqEss - fZ)*KdqEz) in 1/s
+
+# Amount by which the quantum yield is actually reduced in the steady-state and current situation
+observed PhiqE = (fP*gamma1 + fP*fZ*gamma2 + fZ*gamma3)*PhiqEmax
+variable PhiqEss = (fqEss*gamma1 + fqEss*fqEss*gamma2 + fqEss*gamma3)*PhiqEmax
+
+# The quantum yield of the open reaction centers after reduction by qE in steady state and at current situation
+observed PhiIIoss = PhiIIop - PhiqEss
+variable qPss = min(J2pp, J2pm)/PARaP2/PhiIIoss
+observed PhiIIo = PhiIIop - PhiqE
+observed qP = J2/PARaP2/PhiIIo
+
+# Quantum yield of PSII after photoinhibition and qE (Eqn. S1.28)
+observed PhiII = ifelse(PARaP2 > Flux0, J2/PARaP2, PhiIIo)
+
+# Potential rate of electron transport limited by qE (Eqn. S1.29)
+variable J2qE = ifelse(PhiIIo < PhiIIoss, (1 - (PhiIIoss - PhiIIo)/PhiIIoss)*J2pp, J2pp) in umol/m^2/s
+
+# Steady-state relative absorbance due to chloroplast movement (Eqn. S1.30)
+variable alpharss = min(1.0 + Ib/Iac*alpharac, 1.0 + alpharac - (alphar_alpha*(Ib - Iac)  +
+                    alpharav -sqrt((alphar_alpha*(Ib - Iac) + alpharav)^2 -
+                    4*alphar_alpha*thetaalphar*alpharav*(Ib - Iac)))/(2*thetaalphar))
+
+# Initial slope of the light response curve of chloroplast movement (Eqn. S1.31)
+variable alphar_alpha = alphar_alpha25*exp(-(Tl - Tref)*DHaAlphar/(Tref*R*Tl)) in 1/umol*m^2*s
+
+# Dynamics of the relative absorbance due to chloroplast movement (Eqn. S1.32)
+derivative d_alphar_dt of alphar = ifelse(alpharss > alphar, (alpharss - alphar)*Kialpha, (alpharss - alphar)*Kdalpha) in 1/s
+
+# Rate constant at which absorbance increases due to chloroplast movement (Eqn. S1.33)
+variable Kialpha = Kialpha25*exp((Tl - Tref)*DHaKalpha/(Tref*R*Tl))*(1 + exp((Tref*DsKalpha - DHdKalpha)/(Tref*R)))/(1 + exp((Tl*DsKalpha - DHdKalpha)/(Tl*R))) in 1/s
+
+# Rate constant at which absorbance decreases due to chloroplast movement (Eqn. S1.34)
+variable Kdalpha = Kdalpha25*exp((Tl - Tref)*DHaKalpha/(Tref*R*Tl))*(1 + exp((Tref*DsKalpha - DHdKalpha)/(Tref*R)))/(1 + exp((Tl*DsKalpha - DHdKalpha)/(Tl*R))) in 1/s
+
+# New equations
+variable Kinh = max(Kinh0 - fprot*PhiqE, zeroKinh) in m^2/mol
+constant zeroKinh = 0 in  m^2/mol
+
+# Dynamics of damaged PSII units (Eqn. S1.35)
+derivative d_PSIId_dt of PSIId = (1 - PSIId)*PARa*alphar*Kinh - PSIId*Krep in 1/s
+
+# Rate of PSII repair (Eqn. S1.37)
+variable Krep = Krep25*exp((Tl - Tref)*DHaKrep/(Tref*R*Tl))*(1 + exp((Tref*DsKrep - DHdKrep)/(Tref*R)))/(1 + exp((Tl*DsKrep - DHdKrep)/(Tl*R))) in 1/s
+
+# Potential rate of RuBP regeneration limited NADPH production (Eqn. S1.38)
+observed VrJ = J2qE*(1 - fpseudo/(1 - fcyc))/2.0*(2.0 + 1.5*phi)/(2.0 + 2.0*phi) in umol/m^2/s
+
+# Electron transport limited by metabolism (Eqn. S1.39)
+variable J2pm =  min(VrTPU,VrE)/(1 - fpseudo/(1 - fcyc))*2.0/(2.0 + 1.5*phi)*(2.0 + 2.0*phi) in umol/m^2/s
+
+# Electron transport limited by metabolism in the steady-state
+#variable J2pmss =  min(min(VrTPU,VrEss), VrRBss)/(1 - fpseudo/(1 - fcyc))*2.0/(2.0 + 1.5*phi)*(2.0 + 2.0*phi) in umol/m^2/s
+#variable VrEss = fRss*Vrmax*PGA/(PGA + KmPGA) in umol/m^2/s
+
+# Rate of carboxylation in the steady-state with fully active Rubisco
+variable VrRBss =  fRBmax*Kc*RB*Cc/(Cc + Kmc*(1.0 + O2/Kmo))*(1.0 + phi) in umol/m^2/s
+
+# Actual electron transport (Eqn. S1.40)
+variable J2 = min(J2qE, J2pm) in umol/m^2/s
+
+# Quantum yield of PSII in the absence of photoinhibition or qE (Eqn. S1.41)
+variable PhiIId = (Fm_a - Fo_a)/Fm_a
+
+variable Fm_d = kf/(kf + kDinh)
+variable Fo_d = kf/(kf + kDinh)
+variable Fm = (1 - PSIId)*Fm_a + PSIId*Fm_d
+variable Fo = (1 - PSIId)*Fo_a + PSIId*Fo_d
+variable PhiIIop = (Fm - Fo)/Fm
+
+# Maximum fluorescence yield of dark-adapted leaves (Eqn. S1.42)
+variable Fm_a = kf/(kf + kD0)
+
+# Minimum fluorescence yield of dark-adapted leaves (Eqn. S1.43)
+variable Fo_a =  kf/(kf + kD0 + kp)
+
+# Maximum fluorescence yield in the light of active PSII (Eqn. S1.44)
+variable Fmp_a =  alphar*kf/(kf + kD)
+
+# Minimum fluorescence yield in the light of active PSII (Eqn. S1.45)
+variable Fop_a = alphar*kf/(kf + kD + kp)
+
+# Rate constant of heat dissipation (Eqn. S1.46)
+variable kD = kp/(PhiIId - PhiqE) - kf - kp in 1/s
+
+# Maximum fluorescence yield in the light of damaged PSII (Eqn. S1.47)
+variable Fmp_d =  alphar*kf/(kf + kDinh)
+
+# Minimum fluorescence yield in the light of damaged PSII (Eqn. S1.48)
+variable Fop_d =  alphar*kf/(kf + kDinh)
+
+# Maximum fluorescence in the light (Eqn. S1.49)
+variable Fmp = (1 - PSIId)*Fmp_a + PSIId*Fmp_d
+
+# Minimum fluorescence in the light (Eqn. S1.50)
+variable Fop = (1 - PSIId)*Fop_a + PSIId*Fop_d
+
+# Stern-Volmer NPQ (Eqn. S1.51)
+observed NPQ = Fm_a/Fmp - 1
+
+# Contribution of photoinhibition to NPQ (Eqn. S1.52)
+observed qI = Fm_a/((1 - PSIId)*Fm_a + PSIId*Fmp_d) - 1
+
+# Contribution of qEs to NPQ (Eqn. S1.53)
+observed qE =  NPQ - qM - qI
+
+# Contribution of chloroplast movement to NPQ (Eqn. S1.55)
+observed qM = NPQ - (Fm_a/Fmp*alphar - 1)
+
+# Maximum rate of electron transport (Eqn. S1.56)
+variable Jmax = Jmax25*exp((Tl - Tref)*DHaJmax/(Tref*R*Tl))*(1 + exp((Tref*DsJmax - DHdJmax)/(Tref*R)))/(1 + exp((Tl*DsJmax - DHdJmax)/(Tl*R))) in umol/m^2/s
+
+# Potential rate of RuBP regeneration limited by TPU (Eqn. S1.57)
+variable VrTPU = 3.0*TPU*(2.0 + 1.5*phi)/(1 - 0.5*phi) in umol/m^2/s
+
+# Maximum rate of triose phosphate utilisation (Eqn. S1.58)
+variable TPU = TPU25*exp((Tl - Tref)*DHaTPU/(Tref*R*Tl))*(1 + exp((Tref*DsTPU - DHdTPU)/(Tref*R)))/(1 + exp((Tl*DsTPU - DHdTPU)/(Tl*R))) in umol/m^2/s
+
+# Potential rate of RuBP regeneration limited by maximum enzyme activity in the regeneration phase of Calvin cycle (Eqn. S1.59)
+variable VrE = fR*Vrmax*PGA/(PGA + KmPGA) in umol/m^2/s
+
+# Steady-state activation state of enzymes in the regeneration phase of Calvin cycle (Eqn. S1.60)
+variable fRss = fR0 + (alphafR*PARa  + (1 - fR0) - sqrt((alphafR*PARa + (1 - fR0))^2 - 4*alphafR*thetafR*PARa*(1 - fR0)))/(2*thetafR)
+
+# Dynamics of enzyme activity in the regeneration phase of the Calvin cycle (Eqn. S1.61)
+derivative d_fR_dt of fR = ifelse(fRss > fR, (fRss - fR)*KiR, (fRss - fR)*KdR) in 1/s
+
+# Rate of change of cytosol CO2 concentration (Eqn. S1.62)
+derivative d_Ccyt_dt of Ccyt = ((Ci - Ccyt)*gw + Rp + Rm - (Ccyt - Cc)*gc)*Mv/Vref in umol/mol/s
+
+# Rate of change of chloroplast CO2 concentration (Eqn. S1.63)
+derivative d_Cc_dt of Cc = ((Ccyt - Cc)*gc - Vc)*Mv/Vref in umol/mol/s
+
+# Mitochondrial respiration (Eqn. S1.64)
+variable Rm = Rm25*exp((Tl - Tref)*DHaRm/(Tref*R*Tl)) in umol/m^2/s
+
+# Photorespiration (Eqn. S1.65)
+observed Rp = 0.5*PR*kPR in umol/m^2/s
+
+# Dynamics of photorespiration intermediates (Eqn. S1.66)
+derivative d_PR_dt of PR = Vc*phi - PR*kPR in umol/m^2/s
+
+# Dynamics of intercellular CO2 concentration (Eqn. S1.67)
+derivative d_Ci_dt of Ci = ((Ca - Ci)/(1/gsc + 1/gbc) - (Ci - Ccyt)*gw)*Mv/Vref in umol/mol/s
+
+# Net CO2 assimilation (Eqn. S1.68)
+variable gsc = gsw/1.56 in mol/m^2/s
+observed A = (Ca - Ci)/(1/gsc + 1/gbc) in umol/m^2/s
+
+# Boundary layer conductance to CO2 fluxes (Eqn. S1.76)
+variable gbc = gbw/1.37 in mol/m^2/s
+
+# Dynamics of stomatal conductance (Eqn. S1.77)
+# Note: r0 < gs0 -> r0 must change with VPD in the same way as gs0
+derivative d_gsw_dt of gsw = ifelse(gss > gsw, (gss - gsw)*Kgsi, (gss - gsw)*Kgsd) in mol/m^2/s^2
+
+# Steady state stomatal conductance to fluxes of water vapour (Eqn. S1.78)
+observed gss = fI*fvpd*gswm in mol/m^2/s
+
+# Relative effect of irradiance on stomatal conductance (Eqn. S1.79)
+variable fI_a = thetafI
+variable fI_b = -(1 + fI0 + alphafI*PAR)
+variable fI_c = fI0 + alphafI*PAR
+variable fI = (-fI_b - sqrt(fI_b^2 - 4*fI_a*fI_c))/(2*fI_a)
+
+# Relative effect of VPD on stomatal conductance (Eqn. S1.80)
+variable fvpd = 1/(1 + VPDleaf/D0)
+
+# Leaf-to-air vapour pressure difference (Eqn. S1.81)
+variable ea = H2OR*air_pressure in kPa
+observed VPDleaf = max(es_leaf - ea, zero_pressure) in kPa
+constant zero_pressure = 1e-1 in kPa
+
+# Saturated vapour pressure (Eqn. S1.82)
+variable es_leaf = es0*exp(es_k*(Tl - Tzero)/(es_Tref + (Tl - Tzero))) in kPa
+
+# Area of chloroplast exposed to intercellular spaces (Eqn. S1.83)
+observed Sc = Scm*falphaSc*alphar
+
+# Chloroplast conductance (Eqn. S1.84 & 85)
+variable gc = Sc/Sm*gcm25*exp((Tl - Tref)*DHaGc/(Tref*R*Tl))*(1 + exp((Tref*DsGc - DHdGc)/(Tref*R)))/(1 + exp((Tl*DsGc - DHdGc)/(Tl*R))) in mol/m^2/s
+
+# Wall chloroplast (Eqn. S1.86)
+variable gw = gw25*exp((Tl - Tref)*DHaGw/(Tref*R*Tl))*(1 + exp((Tref*DsGw - DHdGw)/(Tref*R)))/(1 + exp((Tl*DsGw - DHdGw)/(Tl*R))) in mol/m^2/s
+
+# Dynamics of Ca, H2OS and calculation of Photo, Transpiration and Cond
+derivative d_Ca_dt of Ca = (-Flow*Ca + Flow*CO2R - leaf_surface*A)*R*Ta/volume_chamber/air_pressure in umol/mol/s
+observed Photo = (Flow*CO2R - Flow*Ca)/leaf_surface in umol/m^2/s
+derivative d_H2OS_dt of H2OS = (-(Flow + leaf_surface*transpiration)*H2OS + Flow*H2OR + leaf_surface*transpiration)*R*Ta/volume_chamber/air_pressure in mmol/mol/s
+observed transpiration = VPDleaf/(air_pressure - (es_leaf + ea)/2.0)*1/(1/gsw + 1/gbw) in mmol/m^2/s # Farquhar & Sharkey (1982)
+observed Trmmol = Flow*(H2OS - H2OR)/(leaf_surface*(1 - H2OS)) in mmol/m^2/s
+variable gtw = Trmmol*(air_pressure - (es_leaf + ea)/2.0)/VPDleaf in mol/m^2/s  # Farquhar & Sharkey (1982)
+observed Cond = 1/(1/gtw - 1/gbw) in mol/m^2/s
+
+# Apparent mesophyll conductance
+observed gm = A/(Ci - Cc) in mol/m^2/s
+
+# Air molar volume
+variable Mv = R*Ta/air_pressure in dm^3/mol
+
+# Export limiting factors on the regeneration phase of the Calvin cycle
+observed reg_limit = ifelse( abs(VrJ - Vr) < Flux0, 1.0, ifelse( abs(VrTPU - Vr) < Flux0, 2.0, 3.0))
+
+################################################################################
+###############################  Inputs  ######################################
+################################################################################
+
+# States
+state PGA = 50 in umol/m^2
+state RuBP = 50 in umol/m^2
+state fRB = 0.25
+#state fP = 0
+#state fZ = 0
+#state PhiqE = 0
+state alphar = 1
+state PSIId = 0
+state fR = 0
+state PR = 0 in umol/m^2
+state Cc = 380 in umol/mol
+state Ccyt = 380 in umol/mol
+state Ci = 380 in umol/mol
+state Ca = 380 in umol/mol
+state H2OS = 20 in mmol/mol
+state gsw = 0.09 in mol/m^2/s
+#state Tl = 298 in K
+
+# Forcings
+forcing Ib = [100,100.] at [0,100.] in umol/m^2/s
+forcing Ig = [0,0.] at [0,100.] in umol/m^2/s
+forcing Ir = [900,900.] at [0,100.] in umol/m^2/s
+forcing Ta = [298,298.] at [0,100.] in K
+forcing Tl = [298,298.] at [0,100.] in K
+forcing H2OR = [20., 20.] at [0,1] in mmol/mol
+forcing CO2R = [400., 400.] at [0,1] in umol/mol
+
+
+# Parameters
+# Electron transport
+parameter sigma2 = 0.5
+parameter Jmax25 = 139.28 in umol/m^2/s
+parameter DHaJmax = 36.21 in kJ/mol
+parameter DHdJmax = 215.9 in kJ/mol
+parameter DsJmax = 0.69 in kJ/mol/K
+parameter kD0 = 4.55e8 in 1/s
+parameter kDinh = 5e9 in 1/s
+parameter kf = 5.6e7 in 1/s
+parameter kp = 2.654e9 in 1/s
+parameter fcyc = 0.1
+parameter fpseudo = 0.1
+parameter theta = 0.7
+parameter gamma1 = 0.2
+parameter gamma2 = 0.6
+parameter gamma3 = 0.2
+parameter PhiqEmax = 0.20
+#parameter KiqEp = 1.87e-2 in 1/s
+#parameter KdqEp = 2.39e-2 in 1/s
+#parameter KiqEz = 1.87e-3 in 1/s
+#parameter KdqEz = 2.39e-3 in 1/s
+parameter Kinh0 = 1e-7 in m^2/umol
+parameter fprot = 1e-7 in m^2/umol
+parameter Krep25 = 1.92e-4 in 1/s
+parameter DHaKrep = 160.8 in kJ/mol
+parameter DHdKrep = 233.23 in kJ/mol
+parameter DsKrep = 0.78 in kJ/mol/K
+parameter alphar_alpha25 = 6.55e-3 in 1/umol*m^2*s
+parameter DHaAlphar = 67.32 in kJ/mol # We add the negative sign in the equation so this should remain positive
+parameter DHaKalpha = 90.5 in kJ/mol
+parameter DsKalpha =  1.08 in kJ/mol/K
+parameter DHdKalpha = 328 in kJ/mol
+parameter Iac = 1.6 in umol/m^2/s
+parameter alpharac = 0.05
+parameter alpharav = 0.25
+parameter thetaalphar = 0.36
+parameter Kialpha25 = 1.49e-3 in 1/s
+parameter Kdalpha25 = 1.86e-3 in 1/s
+
+# Regeneration
+parameter fR0 = 0.04
+parameter alphafR = 0.0025 in 1/umol*m^2*s
+parameter thetafR = 0.96
+parameter KiR = 6.28e-3 in 1/s
+parameter KdR = 7.50e-3 in 1/s
+parameter Vrmax = 118.65 in umol/m^2/s
+parameter KmPGA = 5 in umol/m^2
+
+# Rubisco
+parameter RB = 15.90 in umol/m^2
+parameter Kc25 = 4.16 in 1/s
+parameter DHaKc = 41.82 in kJ/mol
+parameter Ko25 = 1.26 in 1/s
+parameter DHaKo = 55.15 in kJ/mol
+parameter Kmc25 = 261.7 in umol/mol
+parameter DHaKmc = 49.43 in kJ/mol
+parameter Kmo25 = 198.5 in mmol/mol
+parameter DHaKmo = 29.08 in kJ/mol
+parameter KaRCA = 10.2 in mg/m^2
+parameter ac = 0.27
+parameter bc = 0.014 in mol/umol
+parameter KdRB = 6.8e-4 in 1/s
+parameter Krca = 8.63e-5 in 1/s/mg*m^2
+parameter fRBmin = 0.48
+parameter O2 = 210 in mmol/mol
+parameter RCA = 117.37 in mg/m^2
+parameter DHdRCA = 290.2 in kJ/mol
+parameter ToRCA = 300.4 in K
+parameter DHaRCA = 30.0 in kJ/mol
+parameter KmRuBP = 0.02 in mM
+parameter Vch = 10 in mL/m^2
+parameter KiPGA = 0.84 in mM
+
+# TPU
+parameter TPU25 = 7.47 in umol/m^2/s
+parameter DHaTPU = 57.5 in kJ/mol
+parameter DHdTPU = 246.7 in kJ/mol
+parameter DsTPU = 0.79 in kJ/mol/K
+
+# CO2 diffusion
+parameter DHaGc = 70.2 in kJ/mol
+parameter DHdGc = 94.0 in kJ/mol
+parameter DsGc = 0.32 in kJ/mol/K
+parameter DHaGw = 70.2 in kJ/mol
+parameter DHdGw = 94.0 in kJ/mol
+parameter DsGw = 0.32 in kJ/mol/K
+parameter Rm25 = 0.99 in umol/m^2/s
+parameter DHaRm = 56.2 in kJ/mol
+parameter kPR = 0.024 in 1/s
+parameter Vref = 1.55e-4 in m
+parameter Scm = 7.1
+parameter Sm = 9.8
+parameter falphaSc = 0.93
+parameter gcm25 = 0.39 in mol/m^2/s
+parameter gw25 = 0.75 in mol/m^2/s
+
+# Stomatal Conductance
+parameter D0 = 0.74 in kPa
+parameter fI0 = 0.39
+parameter gswm = 0.48 in mol/m^2/s
+parameter alphafI = 7.67e-4 in 1/umol*m^2*s
+parameter thetafI = 0.88
+parameter Kgsi  = 1.14e-3 in 1/s
+parameter Kgsd  = 1.14e-3 in 1/s
+
+# Licor chamber
+parameter gbw = 9.2 in mol/m^2/s
+parameter volume_chamber = 80 in cm^3
+parameter leaf_surface = 2 in cm^2
+parameter Flow = 500 in umol/s
+
+# Optical properties of the leaf
+parameter alphab = 0.92
+parameter alphag = 0.72
+parameter alphared = 0.83
+parameter alphabp = 0.66
+parameter alphagp = 0.60
+parameter alpharp = 0.80
+
+
+# # Constants
+constant air_pressure = 101 in kPa
+constant Flux0 = 1e-16 in umol/m^2/s
+constant R = 8.31 in J/mol/K
+constant Tzero = 273.15 in K
+constant es0 = 0.61078 in kPa
+constant es_k = 17.269
+constant es_Tref = 237.3 in K
+constant Tref = 298.15 in K

@@ -5,6 +5,7 @@
 ###################################################################################################
 
 # Run a dynamic simulation
+#' @export
 cvode.ODEmodel = function(model) {
     sim = wrap_cvodes(times = model$Time, states = model$States$Values,
                 parameters = model$Parameters$Values,

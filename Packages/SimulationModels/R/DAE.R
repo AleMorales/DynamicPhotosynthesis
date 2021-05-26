@@ -6,6 +6,7 @@
 ###################################################################################################
 
 # Run a dynamic simulation
+#' @export
 ida.DAEmodel = function(model) {
     sim = ida_Cpp_stl(times = model$Time, states = model$States$Values,
                 derivatives = model$Derivatives$Values,

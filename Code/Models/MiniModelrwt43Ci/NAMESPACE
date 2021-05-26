@@ -1,0 +1,3 @@
+useDynLib(MiniModelrwt43Ci, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)

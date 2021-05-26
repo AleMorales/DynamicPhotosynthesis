@@ -37,8 +37,7 @@ generate_ode_example = function() {
                             hmin = 0, hmax = 0, maxerr = 5, maxnonlin = 10,
                             maxconvfail = 10, method = "bdf",jacobian = 0,
                             positive = 0, sensitivity = T),
-            model = example_model,
-            jacobian = example_jacobian)
+            model = example_model)
 }
 
 # Create an instance of the model

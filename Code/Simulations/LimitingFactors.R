@@ -581,3 +581,182 @@ text(9,0.95, "F")
 text(c(45, 135),0.95, c(50,1000))
 
 dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Effect of frequency -----------------------------------------------------
+
+# Simulate control model at different frequencies
+# Calculata accumulated photosynthesis
+
+lightflecksSumA = function(model, period, PARs) {
+  
+  PAR1 = PARs[1]
+  PAR2 = PARs[2]
+  
+  # CVODE settings
+  model$set_settings(c("atol","rtol","maxsteps","maxerr","maxnonlin","maxconvfail","minimum"), 
+                     c(1e-10,1e-8,5e4,20,20,20, -1e-6))
+  model$set_settings(c("silent","positive", "force_positive"), c(TRUE, TRUE,TRUE))
+  model$set_settings("maxtime", 1000)
+  
+  # Assign parameters from literature to the model
+  filter = which(names(parameters) %in% names(model$Parameters$Values))
+  model$set_parameters(names(parameters[filter]),unname(parameters[filter])) 
+  
+  # Simulate a LiCOR with 10% red - 90% blue
+  model$set_forcings("Ib", cbind(c(0,1), c(PAR1,PAR1)*0.1))
+  model$set_forcings("Ir", cbind(c(0,1), c(PAR1,PAR1)*0.9))
+  model$set_forcings("Ig", cbind(c(0,1), c(0,0)))
+  model$set_forcings("CO2R", cbind(c(0,1), c(400,400)))
+  model$set_forcings("H2OR", cbind(c(0,1), c(20,20)))
+  model$set_forcings("Ta", cbind(c(0,1), c(298.15, 298.15)))
+  model$set_forcings("Tl", cbind(c(0,1), c(298.15, 298.15)))
+  model$set_states("Ci", 400)
+  model$set_states("Cc", 400)
+  model$set_states("Ccyt", 400)
+  tryCatch(model$set_states("PR", 25), error = function(x) NULL)
+  
+  # Calculate steady-state
+  model$set_time(c(0,1800))
+  steadyState = cvode(model)[2,names(model$States$Values)]
+  model$set_states(names(steadyState), steadyState)
+  model$set_states("sumA", 0)
+  
+  # Simulate Transient - Square wave light determined by period
+  dt = min(1e-2, period/10)
+  timeI = sort(c(seq(0,3600, by = period), seq(dt,3600 + dt, by = period)))
+  model$set_forcings("Ib", cbind(timeI, c(rep(c(PAR1,PAR2,PAR2,PAR1)*0.1, times = 3600/period/2), PAR1*0.1,PAR2*0.1)))
+  model$set_forcings("Ir", cbind(timeI,  c(rep(c(PAR1,PAR2,PAR2,PAR1)*0.9, times = 3600/period/2), PAR1*0.9,PAR2*0.9)))
+  model$set_time(seq(0,3600,by = 1))
+  diff(cvode(model)[c(1800,3600),"sumA"])/1800
+}
+
+
+
+if(.Platform$OS.type == "windows") {
+  cl <- makeCluster(8)
+} else {
+  cl <- makeForkCluster(8)
+}
+registerDoParallel(cl)
+
+periods = c(0.1, 0.3, 0.5, 1, 2, 3,  5, 10, 15, 30, 60, 90, 150, 225, 300)
+LF1000 = foreach(period = periods, .packages = "MiniModel") %dopar% {
+  lightflecksSumA(generate_MiniModel_model(), period, c(50,1000))
+}
+LF800 = foreach(period = periods, .packages = "MiniModel") %dopar% {
+  lightflecksSumA(generate_MiniModel_model(), period, c(50,800))
+}
+LF150_1000 = foreach(period = periods, .packages = "MiniModel") %dopar% {
+  lightflecksSumA(generate_MiniModel_model(), period, c(150,800))
+}
+LF600 = foreach(period = periods, .packages = "MiniModel") %dopar% {
+  lightflecksSumA(generate_MiniModel_model(), period, c(50,600))
+}
+LF400 = foreach(period = periods, .packages = "MiniModel") %dopar% {
+  lightflecksSumA(generate_MiniModel_model(), period, c(50,400))
+}
+
+stopCluster(cl)
+
+AQSS1000 = mean(predict(APAR, newdata = data.frame(PAR = c(50,1000))))
+AQSS800 = mean(predict(APAR, newdata = data.frame(PAR = c(50,800))))
+AQSS600 = mean(predict(APAR, newdata = data.frame(PAR = c(50,600))))
+AQSS400 = mean(predict(APAR, newdata = data.frame(PAR = c(50,400))))
+# Check that average PAR is always the same
+Aconst = predict(APAR, newdata = data.frame(PAR = mean(c(50,1000))))
+png(file = "LightfleckDuration.png", width = 7, height = 4, units = "in",
+    bg = "transparent", res = 1000)
+par(mfrow = c(1,1), las = 1, yaxs = "i", xaxs = "i", mar = c(4,5.5,0.5,0.7),
+    cex.axis = 1.2, cex.lab = 1.2, lwd = 1.2)
+plot(periods, unlist(LF1000), ylim = c(4,13), log = "x", t = "o",
+     xlab = "Lightfleck duration (s)",
+     ylab = expression(bar(A)~(mu*mol~m^{-2}~s^{-1})))
+text(100, 5, "Flashing dynamic")
+abline(h = Aconst)
+text(100, 12, "Constant light")
+abline(h = AQSS1000, lty = 2)
+text(90, 8, "Flashing steady-state")
+dev.off()
+
+
+png(file = "FrequencyProposal.png", width = 5, height = 4, units = "in",
+    bg = "transparent", res = 1000)
+par(mfrow = c(1,1), las = 1, yaxs = "i", xaxs = "i", mar = c(4,5.5,0.5,0.7),
+    cex.axis = 1.2, cex.lab = 1.2, lwd = 1.2)
+plot(periods, unlist(LF150_1000), ylim = c(8,13), log = "x", t = "o",
+     xlab = "Fluctuation duration (s)",
+     ylab = expression(Photosynthesis~(mu*mol~m^{-2}~s^{-1})),
+     xaxt = "n")
+axis(1, at = c(0.1,0.5,5,50))
+text(100, 9, "Fluctuating")
+abline(h = predict(APAR, newdata = data.frame(PAR = mean(c(150,1000)))))
+text(100, 12.7, "Constant")
+dev.off()
+
+
+png(file = "LRC.png", width = 5, height = 4, units = "in",
+    bg = "transparent", res = 1000)
+
+par(mfrow = c(1,1), las = 1, yaxs = "i", xaxs = "i", mar = c(4,5.5,0.5,1.2),
+    cex.axis = 1.2, cex.lab = 1.2, lwd = 1)
+
+plot(PARdata, predict(APAR, newdata=data.frame(PAR = PARdata)), t = "l",
+     ylab = expression(Photosynthesis~(mu*mol~m^{-2}~s^{-1})),
+     xlab = expression(Light~intensity~(mu*mol~m^{-2}~s^{-1})),
+     ylim = c(-1,13))
+
+# Explain the non-linear effect
+A100 = predict(APAR, newdata=data.frame(PAR = 100))
+lines(c(100, 100), c(-10,A100), lty = 2, lwd = 1)
+lines(c(0, 100), c(A100,A100), lty = 2, lwd = 1)
+
+A600 = predict(APAR, newdata=data.frame(PAR = 600))
+lines(c(600, 600), c(-10,A600), lty = 2, lwd = 1)
+lines(c(0, 600), c(A600,A600), lty = 2, lwd = 1)
+
+muA = mean(c(A100, A600))
+A350 = predict(APAR, newdata=data.frame(PAR = 350))
+lines(c(350, 350), c(-10,A350), lty = 2, lwd = 1)
+lines(c(0, 350), c(A350,A350), lty = 2, lwd = 1)
+lines(c(0,100), c(muA, muA))
+
+dev.off()
+
+
+# Calculate cutoff for each lightfleck intensity
+cut1000 = approx(unlist(LF1000) - AQSS1000, periods, 0)$y
+cut800 = approx(unlist(LF800) - AQSS800, periods, 0)$y
+cut600 = approx(unlist(LF600) - AQSS600, periods, 0)$y
+cut400 = approx(unlist(LF400) - AQSS400, periods, 0)$y
+
+plot(c(400,600, 800, 1000), c(cut400, cut600, cut800, cut1000))
+
+
+png(file = "InductionRelaxation.png", width = 6, height = 3, units = "in",
+    bg = "transparent", res = 1000)
+par(mar = c(0.5,0.5,0.5,0.5), bg = "transparent")
+with(control, plot(time, Photo, t = "l", lwd = 4, col = "darkgreen", xaxt = "n",
+                   yaxt = "n", bg = "transparent", bty = "n"))
+dev.off()
+
+
+
+

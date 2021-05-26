@@ -1,0 +1,3 @@
+useDynLib(MiniModelQssPR, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
